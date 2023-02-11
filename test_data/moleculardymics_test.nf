@@ -5,6 +5,8 @@ params.init = 'input'
 params.mini_prefix = 'mini'
 params.equi_prefix = 'nvt'
 params.prod_prefix = 'npt'
+params.publishDir = './results'
+
 
 
 process preparePDB {
@@ -24,6 +26,11 @@ process preparePDB {
 }
 
 process createNewBox {
+
+    publishDir(
+        path: "${params.publishDir}/createNewBox",
+        mode: 'copy'
+    )
 
     input:
     path gro_file
@@ -187,3 +194,75 @@ workflow {
 
 
     }
+    
+    process prepare_npt {
+    input:
+    path npt_mdp
+    path gro_file
+    path topol_file
+    path posre_itp
+
+    output:
+    path("${params.prod_prefix}.tpr"), emit: npt_tpr
+    path 'topol.top', emit: topology
+
+    shell:
+    """
+    gmx grompp -f ${npt_mdp} -c ${gro_file} -r ${gro_file} -t ${params.equi_prefix}.cpt -o ${params.prod_prefix}.tpr -p ${topol_file}
+    """
+}
+
+
+process npt {
+
+    publishDir(
+        path: "${params.publishDir}/npt",
+        mode: 'copy'
+    )
+
+    input:
+    path nvt_tpr
+    path topol_file
+
+    output:
+    path("${params.prod_prefix}.gro"), emit: gro_npt
+    path("${params.prod_prefix}.gro"), emit: edr_npt
+    path("${params.prod_prefix}.gro"), emit: log_npt
+    path("${params.prod_prefix}.gro"), emit: trr_npt
+    path 'topol.top', emit: topology
+
+    shell:
+    """
+    gmx mdrun -v -deffnm ${params.prod_prefix}
+    """
+}
+
+
+
+workflow {
+
+    prepare_PDB_ch = Channel.fromPath("$baseDir/input.pdb")
+    preparePDB(prepare_PDB_ch).set {PDB}
+    preparePDB.out.topology.view()
+    createNewBox(preparePDB.out.gro_input) 
+    solvate(createNewBox.out.gro_processed, preparePDB.out.topology).set {solvate_ch}
+   
+    prepare_ions_ch = Channel.fromPath("$baseDir/ions.mdp")
+    prepare_ionize(prepare_ions_ch, solvate.out.gro_solvated, solvate.out.topology)
+    ionize(prepare_ionize.out.ions_tpr, prepare_ionize.out.topology)
+
+    prepare_minimise_ch = Channel.fromPath("$baseDir/minim.mdp")
+    prepare_minimise(prepare_minimise_ch, ionize.out.gro_ionised, ionize.out.topology)
+    minimise(prepare_minimise.out.mini_tpr, prepare_minimise.out.topology)
+
+    prepare_nvt_ch = Channel.fromPath("$baseDir/nvt.mdp")
+    prepare_nvt(prepare_nvt_ch, minimise.out.gro_mini, minimise.out.topology, preparePDB.out.posre_itp)
+    nvt(prepare_nvt.out.nvt_tpr, prepare_nvt.out.topology)
+
+    prepare_npt_ch = Channel.fromPath("$baseDir/npt.mdp")
+    prepare_nvt(prepare_npt_ch, nvt.out.gro_nvt, nvt.out.topology, preparePDB.out.posre_itp)
+    nvt(prepare_nvt.out.nvt_tpr, prepare_nvt.out.topology)
+
+
+    }
+
