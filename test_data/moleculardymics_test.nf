@@ -172,28 +172,6 @@ process nvt {
     """
 }
 
-workflow {
-
-    prepare_PDB_ch = Channel.fromPath("$baseDir/input.pdb")
-    preparePDB(prepare_PDB_ch).set {PDB}
-    preparePDB.out.topology.view()
-    createNewBox(preparePDB.out.gro_input) 
-    solvate(createNewBox.out.gro_processed, preparePDB.out.topology).set {solvate_ch}
-   
-    prepare_ions_ch = Channel.fromPath("$baseDir/ions.mdp")
-    prepare_ionize(prepare_ions_ch, solvate.out.gro_solvated, solvate.out.topology)
-    ionize(prepare_ionize.out.ions_tpr, prepare_ionize.out.topology)
-
-    prepare_minimise_ch = Channel.fromPath("$baseDir/minim.mdp")
-    prepare_minimise(prepare_minimise_ch, ionize.out.gro_ionised, ionize.out.topology)
-    minimise(prepare_minimise.out.mini_tpr, prepare_minimise.out.topology)
-
-    prepare_nvt_ch = Channel.fromPath("$baseDir/nvt.mdp")
-    prepare_nvt(prepare_nvt_ch, minimise.out.gro_mini, minimise.out.topology, preparePDB.out.posre_itp)
-    nvt(prepare_nvt.out.nvt_tpr, prepare_nvt.out.topology)
-
-
-    }
     
     process prepare_npt {
     input:
@@ -259,10 +237,5 @@ workflow {
     prepare_nvt(prepare_nvt_ch, minimise.out.gro_mini, minimise.out.topology, preparePDB.out.posre_itp)
     nvt(prepare_nvt.out.nvt_tpr, prepare_nvt.out.topology)
 
-    prepare_npt_ch = Channel.fromPath("$baseDir/npt.mdp")
-    prepare_nvt(prepare_npt_ch, nvt.out.gro_nvt, nvt.out.topology, preparePDB.out.posre_itp)
-    nvt(prepare_nvt.out.nvt_tpr, prepare_nvt.out.topology)
-
 
     }
-
