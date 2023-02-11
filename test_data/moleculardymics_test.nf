@@ -10,6 +10,7 @@ params.publishDir = './results'
 
 
 process preparePDB {
+    conda 'env.yaml'
     
     input:
     path pdb_file
@@ -26,6 +27,7 @@ process preparePDB {
 }
 
 process createNewBox {
+    conda 'env.yaml'
 
     publishDir(
         path: "${params.publishDir}/createNewBox",
@@ -46,6 +48,7 @@ process createNewBox {
 
 
 process solvate {
+    conda 'env.yaml'
 
     input:
     path gro_file
@@ -63,6 +66,7 @@ process solvate {
 
 
 process prepare_ionize {
+    conda 'env.yaml'
 
     input:
     path ions_mdp
@@ -81,6 +85,7 @@ process prepare_ionize {
 
 
 process ionize {
+    conda 'env.yaml'
 
     input:
     path ions_tpr
@@ -97,6 +102,7 @@ process ionize {
 }
 
 process prepare_minimise {
+    conda 'env.yaml'
 
     input:
     path mini_mdp
@@ -115,6 +121,7 @@ process prepare_minimise {
 
 
 process minimise {
+    conda 'env.yaml'
 
     input:
     path mini_tpr
@@ -135,6 +142,7 @@ process minimise {
 
 
 process prepare_nvt {
+    conda 'env.yaml'
 
     input:
     path nvt_mdp
@@ -154,6 +162,7 @@ process prepare_nvt {
 
 
 process nvt {
+    conda 'env.yaml'
 
     input:
     path nvt_tpr
